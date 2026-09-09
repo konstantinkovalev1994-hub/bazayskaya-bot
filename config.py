@@ -11,6 +11,7 @@ WALLET = '4100119623577861'
 
 # Ссылка на сайт с отключениями
 URL = 'https://xn--005-8cd3cbuipdid4p.xn--p1ai/'
+TABLE_URL = 'https://xn--005-8cd3cbuipdid4p.xn--p1ai/wp-content/uploads/Gorod.htm'  # Новый URL
 
 # Интервал проверки (в секундах)
 CHECK_INTERVAL = 300  # 5 минут
