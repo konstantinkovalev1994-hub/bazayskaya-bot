@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from config import TABLE_URL
 
 def parse_table():
-    print("🔍 Парсер запущен (прямой вывод)")
+    print("🔍 Парсер запущен (поиск по всей строке)")
 
     try:
         response = requests.get(TABLE_URL, timeout=30)
@@ -22,51 +22,50 @@ def parse_table():
         return []
 
     rows = table.find_all('tr')
-    print(f"📊 Найдено строк: {len(rows)}")
-
-    # Выводим ВСЕ строки таблицы в логи
-    for index, row in enumerate(rows):
-        cols = row.find_all('td')
-        if len(cols) >= 3:
-            col1 = cols[0].text.strip()[:50]
-            col2 = cols[1].text.strip()[:100]
-            col3 = cols[2].text.strip()[:50]
-            print(f"📌 Строка {index}: col1='{col1}', col2='{col2}', col3='{col3}'")
-        elif len(cols) == 1 and row.text.strip():
-            print(f"📌 Строка {index}: ОДНА КОЛОНКА: '{row.text.strip()}'")
-
-    # Теперь пробуем найти "Южная" и Свердловский район
-    print("\n🔍 Ищем Свердловский район и Южную...")
+    results = []
     found_district = False
 
     for row in rows:
-        cols = row.find_all('td')
-        if len(cols) < 3:
-            continue
+        # Берем ВЕСЬ текст строки
+        row_text = row.get_text(strip=True)
         
-        col1 = cols[0].text.strip()
-        col2 = cols[1].text.strip()
-        col3 = cols[2].text.strip()
-        
-        if 'Свердловский район' in col1:
-            print(f"🏢 Найден Свердловский район в строке!")
+        # Ищем начало Свердловского района
+        if 'Свердловский район' in row_text:
             found_district = True
+            print(f"🏢 Найден Свердловский район в строке: {row_text[:50]}")
             continue
 
-        if found_district and 'Южная' in col2:
-            print(f"🎯 НАЙДЕНА ЮЖНАЯ в col2: '{col2}'")
-            return [{
+        if not found_district:
+            continue
+
+        # Выход из района - если встречаем другой район
+        if 'район' in row_text and 'Свердловский' not in row_text:
+            print(f"🚪 Выход: найден другой район")
+            break
+
+        # Ищем "Южная" во всей строке
+        if 'Южная' in row_text:
+            print(f"🎯 НАЙДЕНА ЮЖНАЯ в строке: {row_text[:200]}")
+            
+            # Пытаемся извлечь данные из ячеек
+            cols = row.find_all('td')
+            if len(cols) >= 3:
+                col1 = cols[0].text.strip()
+                col2 = cols[1].text.strip()
+                col3 = cols[2].text.strip()
+            else:
+                # Если ячеек нет - сохраняем всю строку
+                col1 = ''
+                col2 = row_text
+                col3 = ''
+            
+            results.append({
                 'resource': col1,
-                'address': col2,
+                'address': col2 if col2 else row_text,
                 'period': col3,
                 'is_planned': False,
                 'day_type': 'сегодня'
-            }]
+            })
 
-        # Если нашли следующий район, выходим
-        if found_district and col1 and 'район' in col1 and 'Свердловский' not in col1:
-            print(f"🚪 Выход: найден следующий район - '{col1}'")
-            break
-
-    print("❌ Ничего не найдено.")
-    return []
+    print(f"✅ Найдено {len(results)} отключений")
+    return results
