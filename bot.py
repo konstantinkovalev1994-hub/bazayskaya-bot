@@ -125,11 +125,15 @@ async def morning_notification(app):
                 msg += "🔍 <b>Актуальные отключения:</b>\n\n"
                 for item in items:
                     day_label = "ЗАВТРА" if item.get('is_planned', False) else "СЕГОДНЯ"
+                    
+                    resource = ' '.join(item['resource'].split())
+                    address = ' '.join(item['address'].split())
+                    period = ' '.join(item['period'].split())
+                    
                     msg += f"📅 <b>{day_label}</b>\n"
-                    msg += f"📌 {item['resource']}\n"
-                    msg += f"📍 {item['address'][:100]}\n"
-                    msg += f"⏰ {item['period']}\n\n"
-                msg += "📱 Используйте /check для обновления."
+                    msg += f"📌 {resource}\n"
+                    msg += f"📍 {address}\n"
+                    msg += f"⏰ {period}\n\n"
             
             keyboard = [[InlineKeyboardButton("🔍 Проверить сейчас", callback_data='check')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -264,10 +268,16 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = "🔍 <b>Актуальные отключения:</b>\n\n"
         for item in items:
             day_label = "ЗАВТРА" if item.get('is_planned', False) else "СЕГОДНЯ"
+            
+            # Чистим текст от лишних переносов и пробелов
+            resource = ' '.join(item['resource'].split())
+            address = ' '.join(item['address'].split())
+            period = ' '.join(item['period'].split())
+            
             msg += f"📅 <b>{day_label}</b>\n"
-            msg += f"📌 {item['resource']}\n"
-            msg += f"📍 {item['address'][:100]}\n"
-            msg += f"⏰ {item['period']}\n\n"
+            msg += f"📌 {resource}\n"
+            msg += f"📍 {address}\n"
+            msg += f"⏰ {period}\n\n"
     
     keyboard = [[InlineKeyboardButton("🔄 Обновить", callback_data='check')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -326,7 +336,12 @@ async def check_site(app):
             for update in updates:
                 if update[0] == 'new':
                     day_label = "ЗАВТРА" if update[1].get('is_planned', False) else "СЕГОДНЯ"
-                    msg = f"🔔 <b>НОВОЕ ОТКЛЮЧЕНИЕ!</b>\n📅 {day_label}\n📌 {update[1]['resource']}\n📍 {update[1]['address']}\n⏰ {update[1]['period']}"
+                    
+                    resource = ' '.join(update[1]['resource'].split())
+                    address = ' '.join(update[1]['address'].split())
+                    period = ' '.join(update[1]['period'].split())
+                    
+                    msg = f"🔔 <b>НОВОЕ ОТКЛЮЧЕНИЕ!</b>\n\n📅 {day_label}\n📌 {resource}\n📍 {address}\n⏰ {period}"
                 elif update[0] == 'changed':
                     msg = f"🔄 <b>ИЗМЕНИЛСЯ ПЕРИОД!</b>\nСтарый: {update[2]}\nНовый: {update[1]['period']}"
                 else:
