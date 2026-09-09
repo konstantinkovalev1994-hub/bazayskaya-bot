@@ -38,8 +38,8 @@ def parse_table():
         if 'район' in row_text and 'Свердловский' not in row_text:
             break
 
-        # Ищем "Южная" во всей строке
-        if 'Южная' in row_text:
+        # Ищем "Базайская" во всей строке
+        if 'Базайская' in row_text:
             cols = row.find_all('td')
             if len(cols) >= 3:
                 col1 = ' '.join(cols[0].text.split())
