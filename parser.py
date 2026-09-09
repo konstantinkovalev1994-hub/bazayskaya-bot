@@ -41,7 +41,7 @@ def parse_table(url=None):
     
     print(f"📊 Обработка {len(rows)} строк таблицы...")
     
-    for row in rows[2:]:
+    for row in rows:
         cols = row.find_all('td')
         if len(cols) < 3:
             continue
@@ -50,10 +50,7 @@ def parse_table(url=None):
         col2 = cols[1].text.strip()
         col3 = cols[2].text.strip()
         
-        # 🔥 ОТЛАДКА: выводим все строки
-        if col2 and len(col2) > 5:
-            print(f"🔍 СТРОКА: {col2[:150]}")
-        
+        # Проверяем начало Свердловского района
         if target_district in col1:
             print(f"🏢 Найден район: {col1}")
             found_district = True
@@ -63,11 +60,13 @@ def parse_table(url=None):
         if not found_district:
             continue
         
+        # Проверяем новый район (выход)
         if col1 and 'Запланированные' not in col1 and col1 != '':
             if re.search(r'[а-яА-Я]', col1) and not re.search(r'\d', col1) and len(col1) < 30:
                 print(f"🚪 Выход из района: {col1}")
                 break
         
+        # Проверяем маркер "Запланированные на завтра"
         if 'Запланированные отключения на завтра' in col1 or 'Запланированные отключения на завтра' in col2:
             planned_found = True
             print("📅 Запланированные на завтра")
