@@ -1,3 +1,6 @@
+# Добавь эту строку в bot.py (например, в начало файла)
+print("🚀 ВЕРСИЯ 2.0 - ПАРСЕР ИСПРАВЛЕН")
+
 import time
 import asyncio
 import threading
