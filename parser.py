@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from config import TABLE_URL
 
 def parse_table():
-    print("🔍 Парсер запущен (поиск по всей строке)")
+    print("🔍 Парсер запущен (финальная версия)")
 
     try:
         response = requests.get(TABLE_URL, timeout=30)
@@ -26,42 +26,38 @@ def parse_table():
     found_district = False
 
     for row in rows:
-        # Берем ВЕСЬ текст строки
         row_text = row.get_text(strip=True)
         
-        # Ищем начало Свердловского района
         if 'Свердловский район' in row_text:
             found_district = True
-            print(f"🏢 Найден Свердловский район в строке: {row_text[:50]}")
             continue
 
         if not found_district:
             continue
 
-        # Выход из района - если встречаем другой район
         if 'район' in row_text and 'Свердловский' not in row_text:
-            print(f"🚪 Выход: найден другой район")
             break
 
         # Ищем "Южная" во всей строке
         if 'Южная' in row_text:
-            print(f"🎯 НАЙДЕНА ЮЖНАЯ в строке: {row_text[:200]}")
-            
-            # Пытаемся извлечь данные из ячеек
             cols = row.find_all('td')
             if len(cols) >= 3:
-                col1 = cols[0].text.strip()
-                col2 = cols[1].text.strip()
-                col3 = cols[2].text.strip()
+                col1 = ' '.join(cols[0].text.split())
+                col2 = ' '.join(cols[1].text.split())
+                col3 = ' '.join(cols[2].text.split())
             else:
-                # Если ячеек нет - сохраняем всю строку
                 col1 = ''
-                col2 = row_text
+                col2 = ' '.join(row_text.split())
                 col3 = ''
+            
+            # Чистим текст
+            col1 = ' '.join(col1.split())
+            col2 = ' '.join(col2.split())
+            col3 = ' '.join(col3.split())
             
             results.append({
                 'resource': col1,
-                'address': col2 if col2 else row_text,
+                'address': col2,
                 'period': col3,
                 'is_planned': False,
                 'day_type': 'сегодня'
