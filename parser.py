@@ -74,7 +74,7 @@ def parse_table(url=None):
         if col1 == '' and col2 == '' and col3 == '':
             continue
         
-        if 'Базайская' in col2:
+        if 'Южная' in col2:
             results.append({
                 'resource': col1,
                 'address': col2,
