@@ -1,6 +1,7 @@
 from requests_html import HTMLSession
 import re
 from config import URL
+from bs4 import BeautifulSoup
 
 def parse_table(url=None):
     if url is None:
@@ -11,20 +12,29 @@ def parse_table(url=None):
     session = HTMLSession()
     try:
         response = session.get(url)
-        response.html.render(timeout=20)  # Ждём загрузки JavaScript
+        response.html.render(timeout=20, sleep=2)
         html_content = response.html.html
         print(f"✅ Страница загружена, длина: {len(html_content)} символов")
     except Exception as e:
         print(f"❌ Ошибка загрузки: {e}")
-        return []
+        # Пробуем просто получить HTML без рендеринга
+        try:
+            response = session.get(url)
+            html_content = response.html.html
+            print(f"⚠️ Загружено без рендеринга, длина: {len(html_content)}")
+        except Exception as e2:
+            print(f"❌ Ошибка при повторной попытке: {e2}")
+            return []
     
-    # Дальше парсим как обычно
-    from bs4 import BeautifulSoup
     soup = BeautifulSoup(html_content, 'html.parser')
     table = soup.find('table')
     
     if not table:
         print("❌ Таблица не найдена на странице")
+        # Сохраняем HTML для отладки
+        with open('debug.html', 'w', encoding='utf-8') as f:
+            f.write(html_content[:5000])
+        print("📄 Сохранён debug.html для отладки")
         return []
     
     rows = table.find_all('tr')
@@ -60,7 +70,7 @@ def parse_table(url=None):
         
         if 'Запланированные отключения на завтра' in col1 or 'Запланированные отключения на завтра' in col2:
             planned_found = True
-            print(f"📅 Запланированные на завтра")
+            print("📅 Запланированные на завтра")
             continue
         
         if col2 == '' or col2 is None:
