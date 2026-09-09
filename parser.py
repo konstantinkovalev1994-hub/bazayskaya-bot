@@ -19,7 +19,7 @@ def parse_table(url=None):
     
     try:
         response = requests.get(url, headers=headers, timeout=30)
-        response.encoding = 'windows-1251'  # Важно!
+        response.encoding = 'windows-1251'
         html_content = response.text
         print(f"✅ Страница загружена, длина: {len(html_content)} символов")
     except Exception as e:
@@ -41,7 +41,7 @@ def parse_table(url=None):
     
     print(f"📊 Обработка {len(rows)} строк таблицы...")
     
-    for row in rows[2:]:  # Пропускаем заголовки
+    for row in rows[2:]:
         cols = row.find_all('td')
         if len(cols) < 3:
             continue
@@ -50,7 +50,10 @@ def parse_table(url=None):
         col2 = cols[1].text.strip()
         col3 = cols[2].text.strip()
         
-        # 🔥 Ищем Свердловский район
+        # 🔥 ОТЛАДКА: выводим все строки
+        if col2 and len(col2) > 5:
+            print(f"🔍 СТРОКА: {col2[:150]}")
+        
         if target_district in col1:
             print(f"🏢 Найден район: {col1}")
             found_district = True
@@ -60,13 +63,11 @@ def parse_table(url=None):
         if not found_district:
             continue
         
-        # Выход из района
         if col1 and 'Запланированные' not in col1 and col1 != '':
             if re.search(r'[а-яА-Я]', col1) and not re.search(r'\d', col1) and len(col1) < 30:
                 print(f"🚪 Выход из района: {col1}")
                 break
         
-        # Запланированные на завтра
         if 'Запланированные отключения на завтра' in col1 or 'Запланированные отключения на завтра' in col2:
             planned_found = True
             print("📅 Запланированные на завтра")
@@ -77,7 +78,7 @@ def parse_table(url=None):
         if col1 == '' and col2 == '' and col3 == '':
             continue
         
-        # 🔥 Ищем "Южная" (или "Базайская")
+        # 🔥 Ищем "Южная"
         if 'Южная' in col2:
             print(f"✅ НАЙДЕНА ЮЖНАЯ! col1: {col1}, col2: {col2[:100]}")
             results.append({
