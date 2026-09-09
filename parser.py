@@ -1,5 +1,4 @@
-import requests
-from bs4 import BeautifulSoup
+from requests_html import HTMLSession
 import re
 from config import URL
 
@@ -7,24 +6,20 @@ def parse_table(url=None):
     if url is None:
         url = URL
     
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
-        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive'
-    }
+    print(f"📡 Запрос к {url} с рендерингом JavaScript...")
     
+    session = HTMLSession()
     try:
-        print(f"📡 Запрос к {url}...")
-        response = requests.get(url, headers=headers, timeout=30)
-        response.raise_for_status()
-        html_content = response.text
+        response = session.get(url)
+        response.html.render(timeout=20)  # Ждём загрузки JavaScript
+        html_content = response.html.html
         print(f"✅ Страница загружена, длина: {len(html_content)} символов")
     except Exception as e:
         print(f"❌ Ошибка загрузки: {e}")
         return []
     
+    # Дальше парсим как обычно
+    from bs4 import BeautifulSoup
     soup = BeautifulSoup(html_content, 'html.parser')
     table = soup.find('table')
     
@@ -34,11 +29,9 @@ def parse_table(url=None):
     
     rows = table.find_all('tr')
     results = []
-    
-    # 🔥 ПРАВИЛЬНОЕ НАЗВАНИЕ РАЙОНА (как в таблице)
-    target_district = "Свердловский район"
     found_district = False
     planned_found = False
+    target_district = "Свердловский район"
     
     print(f"📊 Обработка {len(rows)} строк таблицы...")
     
@@ -51,7 +44,6 @@ def parse_table(url=None):
         col2 = cols[1].text.strip()
         col3 = cols[2].text.strip()
         
-        # 🔥 Ищем Свердловский район в ПЕРВОЙ колонке
         if target_district in col1:
             print(f"🏢 Найден район: {col1}")
             found_district = True
@@ -61,13 +53,11 @@ def parse_table(url=None):
         if not found_district:
             continue
         
-        # Проверяем новый район (выход)
         if col1 and 'Запланированные' not in col1 and col1 != '':
             if re.search(r'[а-яА-Я]', col1) and not re.search(r'\d', col1) and len(col1) < 30:
                 print(f"🚪 Выход из района: {col1}")
                 break
         
-        # Проверяем маркер "Запланированные на завтра"
         if 'Запланированные отключения на завтра' in col1 or 'Запланированные отключения на завтра' in col2:
             planned_found = True
             print(f"📅 Запланированные на завтра")
@@ -78,7 +68,6 @@ def parse_table(url=None):
         if col1 == '' and col2 == '' and col3 == '':
             continue
         
-        # 🔥 Ищем "Южная" (или "Базайская") во второй колонке
         if 'Южная' in col2:
             print(f"✅ НАЙДЕНА ЮЖНАЯ! col1: {col1}, col2: {col2[:100]}")
             results.append({
