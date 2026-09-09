@@ -130,10 +130,20 @@ async def morning_notification(app):
                     address = ' '.join(item['address'].split())
                     period = ' '.join(item['period'].split())
                     
+                    # Разделяем даты
+                    period_parts = period.split()
+                    if len(period_parts) >= 4:
+                        date_start = f"{period_parts[0]} {period_parts[1]} {period_parts[2]}"
+                        date_end = f"{period_parts[3]} {period_parts[4]} {period_parts[5]}" if len(period_parts) >= 6 else ""
+                        period_formatted = f"{date_start}\n{date_end}"
+                    else:
+                        period_formatted = period
+                    
                     msg += f"📅 <b>{day_label}</b>\n"
                     msg += f"📌 {resource}\n"
                     msg += f"📍 {address}\n"
-                    msg += f"⏰ {period}\n\n"
+                    msg += f"⏰ {period_formatted}\n\n"
+                msg += "📱 Используйте /check для обновления."
             
             keyboard = [[InlineKeyboardButton("🔍 Проверить сейчас", callback_data='check')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -269,15 +279,23 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for item in items:
             day_label = "ЗАВТРА" if item.get('is_planned', False) else "СЕГОДНЯ"
             
-            # Чистим текст от лишних переносов и пробелов
             resource = ' '.join(item['resource'].split())
             address = ' '.join(item['address'].split())
             period = ' '.join(item['period'].split())
             
+            # Разделяем даты
+            period_parts = period.split()
+            if len(period_parts) >= 4:
+                date_start = f"{period_parts[0]} {period_parts[1]} {period_parts[2]}"
+                date_end = f"{period_parts[3]} {period_parts[4]} {period_parts[5]}" if len(period_parts) >= 6 else ""
+                period_formatted = f"{date_start}\n{date_end}"
+            else:
+                period_formatted = period
+            
             msg += f"📅 <b>{day_label}</b>\n"
             msg += f"📌 {resource}\n"
             msg += f"📍 {address}\n"
-            msg += f"⏰ {period}\n\n"
+            msg += f"⏰ {period_formatted}\n\n"
     
     keyboard = [[InlineKeyboardButton("🔄 Обновить", callback_data='check')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -322,6 +340,42 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith('admin_'):
         await admin_button_handler(update, context)
 
+# ============== ФОРМАТИРОВАНИЕ СООБЩЕНИЙ ДЛЯ УВЕДОМЛЕНИЙ ==============
+
+def format_message(item, change_type=None, old_period=None):
+    day_label = "ЗАВТРА" if item.get('is_planned', False) else "СЕГОДНЯ"
+    
+    resource = ' '.join(item['resource'].split())
+    address = ' '.join(item['address'].split())
+    period = ' '.join(item['period'].split())
+    
+    # Разделяем даты
+    period_parts = period.split()
+    if len(period_parts) >= 4:
+        date_start = f"{period_parts[0]} {period_parts[1]} {period_parts[2]}"
+        date_end = f"{period_parts[3]} {period_parts[4]} {period_parts[5]}" if len(period_parts) >= 6 else ""
+        period_formatted = f"{date_start}\n{date_end}"
+    else:
+        period_formatted = period
+    
+    if change_type == 'changed':
+        msg = f"🔄 <b>ИЗМЕНИЛСЯ ПЕРИОД ОТКЛЮЧЕНИЯ!</b>\n\n"
+        msg += f"📅 Тип: {day_label}\n"
+        msg += f"⏰ Старый: {old_period}\n"
+        msg += f"⏰ Новый: {period_formatted}\n\n"
+    else:
+        msg = f"🔔 <b>НОВОЕ ОТКЛЮЧЕНИЕ!</b>\n"
+        msg += f"📅 Тип: {day_label}\n\n"
+    
+    msg += f"📌 <b>Ресурс:</b>\n{resource}\n\n"
+    msg += f"📍 <b>Адреса/Причина:</b>\n{address}\n\n"
+    msg += f"📅 <b>Период:</b>\n{period_formatted}\n"
+    
+    keyboard = [[InlineKeyboardButton("🔍 Проверить все отключения", callback_data='check')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    return msg, reply_markup
+
 # ============== ФОНОВАЯ ЗАДАЧА ==============
 
 async def check_site(app):
@@ -335,24 +389,16 @@ async def check_site(app):
             
             for update in updates:
                 if update[0] == 'new':
-                    day_label = "ЗАВТРА" if update[1].get('is_planned', False) else "СЕГОДНЯ"
-                    
-                    resource = ' '.join(update[1]['resource'].split())
-                    address = ' '.join(update[1]['address'].split())
-                    period = ' '.join(update[1]['period'].split())
-                    
-                    msg = f"🔔 <b>НОВОЕ ОТКЛЮЧЕНИЕ!</b>\n\n📅 {day_label}\n📌 {resource}\n📍 {address}\n⏰ {period}"
+                    msg, reply_markup = format_message(update[1])
                 elif update[0] == 'changed':
-                    msg = f"🔄 <b>ИЗМЕНИЛСЯ ПЕРИОД!</b>\nСтарый: {update[2]}\nНовый: {update[1]['period']}"
+                    msg, reply_markup = format_message(update[1], 'changed', update[2])
                 else:
                     continue
-                
-                keyboard = [[InlineKeyboardButton("🔍 Проверить", callback_data='check')]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
                 
                 for user_id in active_users:
                     try:
                         await app.bot.send_message(chat_id=user_id, text=msg, parse_mode='HTML', reply_markup=reply_markup)
+                        logger.info(f"✅ Отправлено {user_id}")
                     except Exception as e:
                         logger.error(f"❌ Ошибка отправки {user_id}: {e}")
             
