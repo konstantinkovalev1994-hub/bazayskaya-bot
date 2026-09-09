@@ -4,9 +4,6 @@ import re
 from config import URL
 
 def parse_table(url=None):
-    """
-    Парсит таблицу отключений
-    """
     if url is None:
         url = URL
     
@@ -38,6 +35,7 @@ def parse_table(url=None):
     rows = table.find_all('tr')
     results = []
     
+    # 🔥 ПРАВИЛЬНОЕ НАЗВАНИЕ РАЙОНА (как в таблице)
     target_district = "Свердловский район"
     found_district = False
     planned_found = False
@@ -53,7 +51,9 @@ def parse_table(url=None):
         col2 = cols[1].text.strip()
         col3 = cols[2].text.strip()
         
+        # 🔥 Ищем Свердловский район в ПЕРВОЙ колонке
         if target_district in col1:
+            print(f"🏢 Найден район: {col1}")
             found_district = True
             planned_found = False
             continue
@@ -61,12 +61,16 @@ def parse_table(url=None):
         if not found_district:
             continue
         
+        # Проверяем новый район (выход)
         if col1 and 'Запланированные' not in col1 and col1 != '':
             if re.search(r'[а-яА-Я]', col1) and not re.search(r'\d', col1) and len(col1) < 30:
+                print(f"🚪 Выход из района: {col1}")
                 break
         
+        # Проверяем маркер "Запланированные на завтра"
         if 'Запланированные отключения на завтра' in col1 or 'Запланированные отключения на завтра' in col2:
             planned_found = True
+            print(f"📅 Запланированные на завтра")
             continue
         
         if col2 == '' or col2 is None:
@@ -74,7 +78,9 @@ def parse_table(url=None):
         if col1 == '' and col2 == '' and col3 == '':
             continue
         
+        # 🔥 Ищем "Южная" (или "Базайская") во второй колонке
         if 'Южная' in col2:
+            print(f"✅ НАЙДЕНА ЮЖНАЯ! col1: {col1}, col2: {col2[:100]}")
             results.append({
                 'resource': col1,
                 'address': col2,
